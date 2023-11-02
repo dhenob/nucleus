@@ -53,10 +53,6 @@ jobs:
         name: Docker Build ECR
         path: .docker_image_tag.txt
 
-    - name: Set up Debug
-      run: |
-        echo "DEBUG=true" >> $GITHUB_ENV
-
     - name: Trigger Helm Pipeline
       env:
         REPO_OWNER: "dhenob"
