@@ -12,7 +12,7 @@ on:
         description: Select the environment
         required: true
       workflow_name:
-        description: 'Update Helm Chart Values'
+        description: 'Workflowname to trigger'
         required: true
 #   push:
 #     branches:
