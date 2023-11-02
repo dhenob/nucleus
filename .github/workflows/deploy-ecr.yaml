@@ -61,7 +61,7 @@ jobs:
         REPO_NAME: "helm-charts"
         WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}  # Pass the workflow name as an input
         # WORKFLOW_NAME: "Update Helm Chart Values"
-        GITHUB_API_TOKEN: "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"  # Replace with your GitHub Personal Access Token
+        GITHUB_API_TOKEN: "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"  # Replace with your GitHub Personal Access Token
         IMAGE_TAG: ${{ github.event.inputs.tag }}
         ENVIRONMENT: ${{ github.event.inputs.environment }}
       run: |
