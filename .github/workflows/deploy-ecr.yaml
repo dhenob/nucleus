@@ -32,11 +32,7 @@ jobs:
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
-    - name: Install jq
-      run: |
-        apt-get update
-        apt-get install jq -y
-      if: runner.os == 'Linux' 
+    
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1.5.3
@@ -56,6 +52,11 @@ jobs:
       with:
         name: Docker Build ECR
         path: .docker_image_tag.txt
+
+    - name: Use jq to Process JSON
+      run: |
+        jq --version
+        ./jq '.yourJsonField' input.json  # Replace with your actual jq command
 
     - name: Trigger Helm Pipeline
       run: |
