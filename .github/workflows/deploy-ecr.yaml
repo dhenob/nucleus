@@ -54,7 +54,8 @@ jobs:
         path: .docker_image_tag.txt
 
     - name: Set up Debug
-      run: echo ::set-env name=DEBUG::true
+      run: |
+        echo "DEBUG=true" >> $GITHUB_ENV
 
     - name: Trigger Helm Pipeline
       env:
