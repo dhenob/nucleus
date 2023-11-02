@@ -68,3 +68,5 @@ jobs:
           -H "Authorization: token $GITHUB_API_TOKEN" \
           -d "{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}" \
           "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+
+
