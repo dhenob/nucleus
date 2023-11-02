@@ -51,3 +51,21 @@ jobs:
       with:
         name: Docker Build ECR
         path: .docker_image_tag.txt
+
+    - name: Trigger Helm Pipeline
+      run: |
+        REPO_OWNER="dhenob"
+        REPO_NAME="helm-charts"
+        WORKFLOW_NAME="Update Helm Chart Values"
+        TOKEN=${{ secrets.P_GITHUB_API_TOKEN }}
+        IMAGE_TAG="${{ github.event.inputs.tag }}"
+        ENVIRONMENT="${{ github.event.inputs.environment }}"
+          
+        # Trigger the workflow using the GitHub API
+        curl -X POST \
+          -H "Accept: application/vnd.github.v3+json" \
+          -H "Authorization: token $TOKEN" \
+          https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$(curl -H "Authorization: token $TOKEN" -s https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows | jq -r '.workflows[] | select(.name == "'$WORKFLOW_NAME'") | .id')/dispatches \
+          -d "{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}"
+      env:
+        GITHUB_API_TOKEN: ${{ secrets.P_GITHUB_API_TOKEN }}
