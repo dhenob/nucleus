@@ -1,0 +1,53 @@
+name: Docker Build ECR
+run-name: Build v-${{ inputs.tag }}-${{ inputs.environment }}
+
+on: 
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image Tag'     
+        required: true
+      environment:
+        type: environment
+        description: Select the environment
+        required: true
+        
+#   push:
+#     branches:
+#       - 'feat/helm-chart'
+#     paths:
+#       - 'Dockerfile'
+      
+jobs:
+  build:
+    environment: ${{ github.event.inputs.environment }}
+    name: Build Image
+    runs-on: ubuntu-latest   
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3.3.0
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2.0.0
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1.5.3
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        ECR_REPOSITORY: ir-nucleus
+        IMAGE_TAG: ${{ github.event.inputs.tag }}
+      run: |
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f helm/Dockerfile .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+    - name: Save Docker Image Tag
+      run: echo "${{ github.event.inputs.tag }}" > .docker_image_tag.txt
+
+    - name: Archive Docker Image Tag
+      uses: actions/upload-artifact@v2
+      with:
+        name: Docker Build ECR
+        path: .docker_image_tag.txt
