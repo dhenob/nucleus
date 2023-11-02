@@ -53,11 +53,6 @@ jobs:
         name: Docker Build ECR
         path: .docker_image_tag.txt
 
-    - name: Use jq to Process JSON
-      run: |
-        jq --version
-        ./jq '.yourJsonField' input.json  # Replace with your actual jq command
-
     - name: Trigger Helm Pipeline
       run: |
         REPO_OWNER="dhenob"
