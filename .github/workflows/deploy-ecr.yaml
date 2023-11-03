@@ -59,17 +59,37 @@ jobs:
       env:
         REPO_OWNER: "dhenob"
         REPO_NAME: "helm-charts"
-        WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}  # Pass the workflow name as an input
-        # WORKFLOW_NAME: "Update Helm Chart Values"
-        GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}  # Replace with your GitHub Personal Access Token
+        WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+        GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
         IMAGE_TAG: ${{ github.event.inputs.tag }}
         ENVIRONMENT: ${{ github.event.inputs.environment }}
       run: |
-        # Trigger the workflow using the GitHub API
-        curl -X POST \
-          -H "Accept: application/vnd.github.v3+json" \
-          -H "Authorization: token $API_GITHUB_TOKEN" \
-          -d "{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}" \
-          "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/.github/workflows/$WORKFLOW_NAME/dispatches"
+        API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+        POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}"
+        curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
+
+    # - name: Trigger Helm Pipeline
+    #   env:
+    #     REPO_OWNER: "dhenob"
+    #     REPO_NAME: "helm-charts"
+    #     WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}  # Pass the workflow name as an input
+    #     # WORKFLOW_NAME: "Update Helm Chart Values"
+    #     GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}  # Replace with your GitHub Personal Access Token
+    #   run: |
+    #     # Define the API URL for triggering the workflow
+    #     API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+    #     # Construct the JSON payload for the POST request
+    #     POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}"
+    #     # Use the repository secret as the token
+    #     curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token ${{ secrets.API_GITHUB_TOKEN }}" -d "$POST_DATA" "$API_URL"
+    #   #   IMAGE_TAG: ${{ github.event.inputs.tag }}
+    #   #   ENVIRONMENT: ${{ github.event.inputs.environment }}
+    #   # run: |
+    #   #   # Trigger the workflow using the GitHub API
+    #   #   curl -X POST \
+    #   #     -H "Accept: application/vnd.github.v3+json" \
+    #   #     -H "Authorization: token $API_GITHUB_TOKEN" \
+    #   #     -d "{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}" \
+    #   #     "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/.github/workflows/$WORKFLOW_NAME/dispatches"
 
 
