@@ -47,13 +47,13 @@ jobs:
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
     - name: Save Docker Image Tag
-      run: echo "${{ github.event.inputs.tag }}" > .nucleus_image_tag.txt
+      run: echo "${{ github.event.inputs.tag }}" > nucleus_image_tag.txt
 
     - name: Archive Docker Image Tag
       uses: actions/upload-artifact@v2
       with:
         name: Docker Build ECR
-        path: .nucleus_image_tag.txt
+        path: nucleus_image_tag.txt
 
     - name: Trigger Helm Pipeline
       env:
