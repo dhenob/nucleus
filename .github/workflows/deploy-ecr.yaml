@@ -46,15 +46,25 @@ jobs:
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-    - name: Save Docker Image Tag
-      run: echo "${{ github.event.inputs.tag }}" > nucleus_image_tag.txt
 
-    - name: Archive Docker Image Tag
-      uses: actions/upload-artifact@v2
+    - name: Create Release
+      id: create-release
+      uses: softprops/action-gh-release@v1
       with:
-        name: Docker Build ECR
-        path: nucleus_image_tag.txt
+        files: |
+          nucleus_image_tag.txt
+        token: ${{ secrets.GITHUB_TOKEN }}
+        tag_name: v${{ inputs.tag }}
+        title: Release v${{ inputs.tag }}
+        body: Docker image tag for v${{ inputs.tag }}
+      
+    - name: Save Release ID
+      id: release-id
+      run: echo "::set-output name=release_id::${{ steps.create-release.outputs.release_id }}"
 
+    - name: Print Release ID
+      run: echo "Release ID:${{ steps.release-id.outputs.release_id }}"
+    
     - name: Trigger Helm Pipeline
       env:
         REPO_OWNER: "dhenob"
@@ -93,3 +103,11 @@ jobs:
     #   #     "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/.github/workflows/$WORKFLOW_NAME/dispatches"
 
 
+# - name: Save Docker Image Tag
+    #   run: echo "${{ github.event.inputs.tag }}" > nucleus_image_tag.txt
+
+    # - name: Archive Docker Image Tag
+    #   uses: actions/upload-artifact@v2
+    #   with:
+    #     name: Docker Build ECR
+    #     path: nucleus_image_tag.txt
