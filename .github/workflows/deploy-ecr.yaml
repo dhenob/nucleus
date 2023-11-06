@@ -11,9 +11,9 @@ on:
         type: environment
         description: Select the environment
         required: true
-      # workflow_name:
-      #   description: 'Workflowname to trigger'
-      #   required: true
+      workflow_name:
+        description: 'Workflowname to trigger'
+        required: true
 #   push:
 #     branches:
 #       - 'feat/helm-chart'
