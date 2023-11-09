@@ -64,7 +64,7 @@ jobs:
         GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
         IMAGE_TAG: ${{ steps.set-image-tag.outputs.image_tag }}
         ENVIRONMENT: ${{ github.event.inputs.environment }}
-        RELEASE_ID: ${{ steps.create-release.outputs.release_id }}
+        RELEASE_ID: ${{ github.event.inputs.release_id }}
       run: |
         API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
         POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"release_id\": \"$RELEASE_ID\" }}"
