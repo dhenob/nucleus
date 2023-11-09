@@ -60,23 +60,10 @@ jobs:
         tag_name: v${{ inputs.tag }}
         body: Docker image tag for v${{ inputs.tag }}
 
+    - name: Save Release ID
+      id: save-release-id
+      run: echo "::set-output name=release_id::${{ steps.create-release.outputs.release_id }}"
 
-    # - name: Create Release
-    #   id: create-release
-    #   uses: softprops/action-gh-release@v1
-    #   with:
-    #     files: |
-    #       nucleus_image_tag.txt
-    #     token: ${{ secrets.API_GITHUB_TOKEN  }}
-    #     tag_name: v${{ inputs.tag }}
-    #     body: Docker image tag for v${{ inputs.tag }}
-      
-    # - name: Save Release ID
-    #   id: release-id
-    #   run: echo "::set-output name=release_id::${{ steps.create-release.outputs.release_id }}"
-
-    # - name: Print Release ID
-    #   run: echo "Release ID:${{ steps.release-id.outputs.release_id }}"
     
     - name: Trigger Helm Pipeline
       env:
