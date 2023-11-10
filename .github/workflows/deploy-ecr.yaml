@@ -34,7 +34,8 @@ jobs:
         aws-region: us-east-1
 
     - name: Set ECR Repository based on Environment
-      run: echo "::set-env name=ECR_REPOSITORY::${{ env.ECR_REPOSITORY }}"
+      run: echo "ECR_REPOSITORY=${{ env.ECR_REPOSITORY }}" >> $GITHUB_ENV
+
   
     - name: Login to Amazon ECR
       id: login-ecr
