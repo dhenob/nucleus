@@ -34,8 +34,8 @@ jobs:
         aws-region: us-east-1
 
     - name: Set ECR Repository based on Environment
-      run: echo "::set-env name=ECR_REPOSITORY::${{ secrets[env.ENV + '_REPO_NAME'] }}"
-    
+      run: echo "::set-env name=ECR_REPOSITORY::${{ env.ECR_REPOSITORY }}"
+  
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v1.5.3
