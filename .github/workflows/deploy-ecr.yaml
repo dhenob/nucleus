@@ -18,28 +18,7 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v3.3.0
-
-      
-
-      # # Set up environment based on branch name
-      # - name: Set Environment
-      #   id: set-env
-      #   run: |
-      #     BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-      #     if [[ $BRANCH_NAME == feature/* ]]; then
-      #       echo "Setting environment to development"
-      #       echo "::set-output name=environment::dev"
-      #     elif [[ $BRANCH_NAME == release/* ]]; then
-      #       echo "Setting environment to staging"
-      #       echo "::set-output name=environment::stag"
-      #     elif [[ $BRANCH_NAME == main ]]; then
-      #       echo "Setting environment to production"
-      #       echo "::set-output name=environment::prod"
-      #     else
-      #       echo "No environment set for branch $BRANCH_NAME"
-      #       exit 1
-      #     fi
-
+        
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2.0.0
         with:
@@ -69,7 +48,7 @@ jobs:
           WORKFLOW_NAME: "update-helm.yaml" # Assuming this is the workflow ID or name
           GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
-          ENVIRONMENT: ${{ steps.set-env.outputs.environment }}
+          ENVIRONMENT: ${{ jobs.build-and-deploy.environment.name }} 
           PROJECT_NAME: "ir-nucleus-helm"
         run: |
           # Add validation logic here if necessary
