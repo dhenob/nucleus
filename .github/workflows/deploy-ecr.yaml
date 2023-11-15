@@ -1,77 +1,155 @@
-name: Docker Build ECR
+name: Docker Build and Deploy
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Image Tag'
-        required: true
-      environment:
-        type: environment
-        description: 'Select the environment'
-        required: true
-      workflow_name:
-        description: 'Workflow name to trigger'
-        required: true
-      project_name:
-        description: 'Name of the project'
-        required: true
+  push:
+    branches:
+      - feature/*
+      - release/*
+      - main
 
 jobs:
-  build:
-    environment: ${{ github.event.inputs.environment }}
-    name: Build Image
-    runs-on: ubuntu-latest   
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    name: Build and Deploy
+
     steps:
-    - name: Check out code
-      uses: actions/checkout@v3.3.0
+      - name: Check out code
+        uses: actions/checkout@v3.3.0
 
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v2.0.0
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
+      # Set up environment based on branch name
+      - name: Set Environment
+        id: set-env
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          if [[ $BRANCH_NAME == feature/* ]]; then
+            echo "Setting environment to development"
+            echo "::set-output name=environment::development"
+          elif [[ $BRANCH_NAME == release/* ]]; then
+            echo "Setting environment to staging"
+            echo "::set-output name=environment::staging"
+          elif [[ $BRANCH_NAME == main ]]; then
+            echo "Setting environment to production"
+            echo "::set-output name=environment::production"
+          else
+            echo "No environment set for branch $BRANCH_NAME"
+            exit 1
+          fi
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2.0.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1.5.3
+
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+          echo "Docker image built with tag $IMAGE_TAG"
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "Docker image pushed to ECR"
+
+      - name: Trigger Deployment Pipeline
+        env:
+          REPO_OWNER: "dhenob"
+          REPO_NAME: "apps-helm-charts"
+          WORKFLOW_NAME: "update-helm.yaml" # Assuming this is the workflow ID or name
+          GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
+          IMAGE_TAG: ${{ github.sha }}
+          ENVIRONMENT: ${{ steps.set-env.outputs.environment }}
+          PROJECT_NAME: "ir-nucleus-helm"
+        run: |
+          # Add validation logic here if necessary
+          # Example: Check if the workflow exists in the repository
+
+          API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+          POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
+          curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
+          echo "Deployment pipeline triggered for $ENVIRONMENT environment"
+
+
+# name: Docker Build ECR
+
+# on:
+#   workflow_dispatch:
+#     inputs:
+#       tag:
+#         description: 'Image Tag'
+#         required: true
+#       environment:
+#         type: environment
+#         description: 'Select the environment'
+#         required: true
+#       workflow_name:
+#         description: 'Workflow name to trigger'
+#         required: true
+#       project_name:
+#         description: 'Name of the project'
+#         required: true
+
+# jobs:
+#   build:
+#     environment: ${{ github.event.inputs.environment }}
+#     name: Build Image
+#     runs-on: ubuntu-latest   
+#     steps:
+#     - name: Check out code
+#       uses: actions/checkout@v3.3.0
+
+#     - name: Configure AWS credentials
+#       uses: aws-actions/configure-aws-credentials@v2.0.0
+#       with:
+#         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#         aws-region: us-east-1
   
-    - name: Login to Amazon ECR
-      id: login-ecr
-      uses: aws-actions/amazon-ecr-login@v1.5.3
+#     - name: Login to Amazon ECR
+#       id: login-ecr
+#       uses: aws-actions/amazon-ecr-login@v1.5.3
       
-    - name: Build, tag, and push image to Amazon ECR
-      env:
-        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-        IMAGE_TAG: ${{ github.event.inputs.tag }}
-      run: |
-        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+#     - name: Build, tag, and push image to Amazon ECR
+#       env:
+#         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#         ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+#         IMAGE_TAG: ${{ github.event.inputs.tag }}
+#       run: |
+#         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+#         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-    - name: Set Output for Image Tag
-      id: set-image-tag
-      run: echo "::set-output name=image_tag::${{ github.event.inputs.tag }}"
+#     - name: Set Output for Image Tag
+#       id: set-image-tag
+#       run: echo "::set-output name=image_tag::${{ github.event.inputs.tag }}"
 
-    - name: Trigger Helm Pipeline
-      env:
-        REPO_OWNER: "dhenob"
-        REPO_NAME: "helm-charts"
-        WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
-        GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
-        IMAGE_TAG: ${{ steps.set-image-tag.outputs.image_tag }}
-        ENVIRONMENT: ${{ github.event.inputs.environment }}
-        PROJECT_NAME: ${{ github.event.inputs.project_name }}
-      run: |
-        API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
-        POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
-        curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
-    # - name: Trigger Helm Pipeline
-    #   env:
-    #     REPO_OWNER: "dhenob"
-    #     REPO_NAME: "helm-charts"
-    #     WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
-    #     GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
-    #     IMAGE_TAG: ${{ steps.set-image-tag.outputs.image_tag }}
-    #     ENVIRONMENT: ${{ github.event.inputs.environment }}
-    #   run: |
-    #     API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
-    #     POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}"
-    #     curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
+#     - name: Trigger Helm Pipeline
+#       env:
+#         REPO_OWNER: "dhenob"
+#         REPO_NAME: "helm-charts"
+#         WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+#         GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
+#         IMAGE_TAG: ${{ steps.set-image-tag.outputs.image_tag }}
+#         ENVIRONMENT: ${{ github.event.inputs.environment }}
+#         PROJECT_NAME: ${{ github.event.inputs.project_name }}
+#       run: |
+#         API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+#         POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
+#         curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
+#     # - name: Trigger Helm Pipeline
+#     #   env:
+#     #     REPO_OWNER: "dhenob"
+#     #     REPO_NAME: "helm-charts"
+#     #     WORKFLOW_NAME: ${{ github.event.inputs.workflow_name }}
+#     #     GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
+#     #     IMAGE_TAG: ${{ steps.set-image-tag.outputs.image_tag }}
+#     #     ENVIRONMENT: ${{ github.event.inputs.environment }}
+#     #   run: |
+#     #     API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+#     #     POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\" }}"
+#     #     curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
