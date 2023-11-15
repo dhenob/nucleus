@@ -23,13 +23,13 @@ jobs:
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
           if [[ $BRANCH_NAME == feature/* ]]; then
             echo "Setting environment to development"
-            echo "::set-output name=environment::development"
+            echo "::set-output name=environment::dev"
           elif [[ $BRANCH_NAME == release/* ]]; then
             echo "Setting environment to staging"
-            echo "::set-output name=environment::staging"
+            echo "::set-output name=environment::stag"
           elif [[ $BRANCH_NAME == main ]]; then
             echo "Setting environment to production"
-            echo "::set-output name=environment::production"
+            echo "::set-output name=environment::prod"
           else
             echo "No environment set for branch $BRANCH_NAME"
             exit 1
