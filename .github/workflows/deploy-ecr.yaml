@@ -11,29 +11,34 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     name: Build and Deploy
+    environment: 
+      name: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
+
 
     steps:
       - name: Check out code
         uses: actions/checkout@v3.3.0
 
-      # Set up environment based on branch name
-      - name: Set Environment
-        id: set-env
-        run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          if [[ $BRANCH_NAME == feature/* ]]; then
-            echo "Setting environment to development"
-            echo "::set-output name=environment::dev"
-          elif [[ $BRANCH_NAME == release/* ]]; then
-            echo "Setting environment to staging"
-            echo "::set-output name=environment::stag"
-          elif [[ $BRANCH_NAME == main ]]; then
-            echo "Setting environment to production"
-            echo "::set-output name=environment::prod"
-          else
-            echo "No environment set for branch $BRANCH_NAME"
-            exit 1
-          fi
+      
+
+      # # Set up environment based on branch name
+      # - name: Set Environment
+      #   id: set-env
+      #   run: |
+      #     BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+      #     if [[ $BRANCH_NAME == feature/* ]]; then
+      #       echo "Setting environment to development"
+      #       echo "::set-output name=environment::dev"
+      #     elif [[ $BRANCH_NAME == release/* ]]; then
+      #       echo "Setting environment to staging"
+      #       echo "::set-output name=environment::stag"
+      #     elif [[ $BRANCH_NAME == main ]]; then
+      #       echo "Setting environment to production"
+      #       echo "::set-output name=environment::prod"
+      #     else
+      #       echo "No environment set for branch $BRANCH_NAME"
+      #       exit 1
+      #     fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2.0.0
