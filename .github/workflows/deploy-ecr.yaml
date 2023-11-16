@@ -1,5 +1,5 @@
 name: Docker Build and Deploy
-
+#release/*
 on:
   push:
     branches:
@@ -43,12 +43,12 @@ jobs:
 
       - name: Trigger Deployment Pipeline
         env:
-          REPO_OWNER: "kwaku"
-          REPO_NAME: "apps-helm-charts"
+          REPO_OWNER: "dhenob"
+          REPO_NAME: "helm-charts"
           WORKFLOW_NAME: "update-helm.yaml" # workflow ID or name
           GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
-          ENVIRONMENT: ${{ env.ENV_NAME }}
+          ENVIRONMENT: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
           PROJECT_NAME: "ir-nucleus-helm"
         run: |
           API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
