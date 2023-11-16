@@ -51,7 +51,6 @@ jobs:
           ENVIRONMENT: ${{ jobs.build-and-deploy.environment.name }} 
           PROJECT_NAME: "ir-nucleus-helm"
         run: |
-        
           API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
           POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
           curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
