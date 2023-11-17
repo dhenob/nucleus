@@ -1,5 +1,64 @@
+# name: Docker Build and Deploy
+# #release/*
+# on:
+#   push:
+#     branches:
+#       - feature/*
+#       - release/*
+#       - main
+
+# jobs:
+#   build-and-deploy:
+#     runs-on: ubuntu-latest
+#     name: Build and Deploy
+#     environment: 
+#       name: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
+
+
+#     steps:
+#       - name: Check out code
+#         uses: actions/checkout@v3.3.0
+        
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v2.0.0
+#         with:
+#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+#           aws-region: us-east-1
+  
+#       - name: Login to Amazon ECR
+#         id: login-ecr
+#         uses: aws-actions/amazon-ecr-login@v1.5.3
+
+#       - name: Build, tag, and push image to Amazon ECR
+#         env:
+#           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+#           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+#           IMAGE_TAG: ${{ github.sha }}
+#         run: |
+#           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
+#           echo "Docker image built with tag $IMAGE_TAG"
+#           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+#           echo "Docker image pushed to ECR"
+
+#       - name: Trigger Deployment Pipeline
+#         env:
+#           REPO_OWNER: "dhenob"
+#           REPO_NAME: "helm-charts"
+#           WORKFLOW_NAME: "update-helm.yaml" # workflow ID or name
+#           GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
+#           IMAGE_TAG: ${{ github.sha }}
+#           ENVIRONMENT: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
+#           PROJECT_NAME: "ir-nucleus-helm"
+#         run: |
+#           API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
+#           POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
+#           curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
+#           echo "Deployment pipeline triggered for $ENVIRONMENT environment"
+
+
 name: Docker Build and Deploy
-#release/*
+
 on:
   push:
     branches:
@@ -14,7 +73,6 @@ jobs:
     environment: 
       name: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
 
-
     steps:
       - name: Check out code
         uses: actions/checkout@v3.3.0
@@ -25,7 +83,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-  
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1.5.3
@@ -37,15 +95,25 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -f Dockerfile .
-          echo "Docker image built with tag $IMAGE_TAG"
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          echo "Docker image pushed to ECR"
+          if [ $? -eq 0 ]; then
+            echo "Docker image built with tag $IMAGE_TAG"
+            docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+            if [ $? -eq 0 ]; then
+              echo "Docker image pushed to ECR"
+            else
+              echo "Failed to push the Docker image to ECR"
+              exit 1
+            fi
+          else
+            echo "Docker build failed"
+            exit 1
+          fi
 
       - name: Trigger Deployment Pipeline
         env:
           REPO_OWNER: "dhenob"
           REPO_NAME: "helm-charts"
-          WORKFLOW_NAME: "update-helm.yaml" # workflow ID or name
+          WORKFLOW_NAME: "update-helm.yaml"
           GITHUB_API_TOKEN: ${{ secrets.API_GITHUB_TOKEN }}
           IMAGE_TAG: ${{ github.sha }}
           ENVIRONMENT: ${{ (github.ref == 'refs/heads/main' && 'prod') || (startsWith(github.ref, 'refs/heads/release/') && 'stag') || (startsWith(github.ref, 'refs/heads/feature/') && 'dev') }}
@@ -53,10 +121,13 @@ jobs:
         run: |
           API_URL="https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/actions/workflows/$WORKFLOW_NAME/dispatches"
           POST_DATA="{\"ref\": \"main\", \"inputs\": { \"tag\": \"$IMAGE_TAG\", \"environment\": \"$ENVIRONMENT\", \"project_name\": \"$PROJECT_NAME\" }}"
-          curl -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL"
-          echo "Deployment pipeline triggered for $ENVIRONMENT environment"
-
-
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "Accept: application/vnd.github.v3+json" -H "Authorization: token $GITHUB_API_TOKEN" -d "$POST_DATA" "$API_URL")
+          if [ "$RESPONSE" -eq 204 ]; then
+            echo "Deployment pipeline successfully triggered for $ENVIRONMENT environment"
+          else
+            echo "Failed to trigger the deployment pipeline, HTTP status code: $RESPONSE"
+            exit 1
+          fi
 
 
           
